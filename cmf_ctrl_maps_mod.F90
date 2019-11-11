@@ -4,7 +4,7 @@ MODULE CMF_CTRL_MAPS_MOD
 !
 !* CONTAINS:
 ! -- CMF_MAPS_NMLIST   : configuration from namelist
-! -- CMF_RIVMAP_INIT  : read & set river network map 
+! -- CMF_RIVMAP_INIT  : read & set river network map
 ! -- CMF_TOPO_INIT    : read & set topography
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
@@ -13,8 +13,8 @@ MODULE CMF_CTRL_MAPS_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
@@ -33,6 +33,7 @@ CHARACTER(LEN=256)              :: CFLDHGT         !! floodplain elevation profi
 CHARACTER(LEN=256)              :: CRIVWTH         !! channel width
 CHARACTER(LEN=256)              :: CRIVHGT         !! channel depth
 CHARACTER(LEN=256)              :: CRIVMAN         !! river manning coefficient
+CHARACTER(len=256)              :: CRIVSHP         !! river cross-section geometry parameter
 !* optional maps
 CHARACTER(LEN=256)              :: CPTHOUT         !! bifurcation channel table
 CHARACTER(LEN=256)              :: CGDWDLY         !! Groundwater Delay Parameter
@@ -44,14 +45,14 @@ CHARACTER(LEN=256)              :: CRIVPARNC       !! river parameter netcdf (WI
 CHARACTER(LEN=256)              :: CMEANSLNC       !! mean sea level netCDF
 
 NAMELIST/NMAP/     CNEXTXY,  CGRAREA,  CELEVTN,  CNXTDST, CRIVLEN, CFLDHGT, &
-                   CRIVWTH,  CRIVHGT,  CRIVMAN,  CPTHOUT, CGDWDLY, CMEANSL,          &
+                   CRIVWTH,  CRIVHGT,  CRIVMAN,  CRIVSHP,  CPTHOUT, CGDWDLY, CMEANSL, &
                    LMAPCDF,  CRIVCLINC,CRIVPARNC,CMEANSLNC
 
 
 CONTAINS
 !####################################################################
 ! -- CMF_MAP_NMLIST   : configuration from namelist
-! -- CMF_RIVMAP_INIT  : read & set river network map 
+! -- CMF_RIVMAP_INIT  : read & set river network map
 ! -- CMF_TOPO_INIT    : read & set topography
 !
 !
@@ -69,7 +70,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 
 NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
-WRITE(LOGNAM,*) "CMF::MAP_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE 
+WRITE(LOGNAM,*) "CMF::MAP_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE
 
 !*** 2. default value
 CNEXTXY="./nextxy.bin"
@@ -82,6 +83,7 @@ CFLDHGT="./fldhgt.bin"
 CRIVWTH="./rivwth.bin"
 CRIVHGT="./rivhgt.bin"
 CRIVMAN="./rivman.bin"
+CRIVSHP="./rivshp.bin"
 
 CPTHOUT="./bifprm.txt"
 CGDWDLY="NONE"
@@ -115,6 +117,7 @@ ELSE
   WRITE(LOGNAM,*)   "CRIVWTH:   ", TRIM(CRIVWTH)
   WRITE(LOGNAM,*)   "CRIVHGT:   ", TRIM(CRIVHGT)
   WRITE(LOGNAM,*)   "CRIVMAN:   ", TRIM(CRIVMAN)
+  WRITE(LOGNAM,*)   "CRIVSHP:   ", TRIM(CRIVSHP)
 
   WRITE(LOGNAM,*)   "CPTHOUT:   ", TRIM(CPTHOUT)
   IF( LGDWDLY )THEN
@@ -138,7 +141,7 @@ END SUBROUTINE CMF_MAPS_NMLIST
 
 !####################################################################
 SUBROUTINE CMF_RIVMAP_INIT
-! read & set river network map 
+! read & set river network map
 ! -- call from CMF_DRV_INIT
 USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX,NY,NLFP, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2NEXTX,I2NEXTY, I2RIVSEQ,I2REGION, REGIONALL,REGIONTHIS, &
@@ -271,7 +274,7 @@ CALL NCERROR (NF90_OPEN(CRIVCLINC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVCLINC)
 
 !*** next xy
 CALL NCERROR ( NF90_INQ_VARID(NCID,'nextx',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2NEXTX),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2NEXTX),'reading data' )
 
 CALL NCERROR ( NF90_INQ_VARID(NCID,'nexty',VARID),'getting id' )
 CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2NEXTY),'reading data' )
@@ -535,7 +538,7 @@ DO ISEQ=1, NSEQALL
     I1NEXT(ISEQ)=-9
   ENDIF
 END DO
-      
+
 END SUBROUTINE CALC_1D_SEQ
 !==========================================================
 !+
@@ -587,7 +590,7 @@ DO IPTH=1, NPTHOUT
     ELSE
       PWTH=PTH_WTH(IPTH,ILEV)
       IF( PWTH>0 )then
-        PTH_ELV(IPTH,ILEV)=PELV + ILEV - 2.0    !! ILEV=2: bank top level 
+        PTH_ELV(IPTH,ILEV)=PELV + ILEV - 2.0    !! ILEV=2: bank top level
       ELSE
         PTH_ELV(IPTH,ILEV)=1.D20
       ENDIF
@@ -620,16 +623,17 @@ END SUBROUTINE CMF_RIVMAP_INIT
 
 !####################################################################
 SUBROUTINE CMF_TOPO_INIT
-! read & set topography map 
+! read & set topography map
 ! -- call from CMF_DRV_INIT
-USE YOS_CMF_INPUT,  ONLY: TMPNAM,   NX,NY,NLFP, LMAPEND,  &
+USE YOS_CMF_INPUT,  ONLY: TMPNAM,   NX,NY,NLFP, LMAPEND, LRIVSHP,  &
                         & LFPLAIN,  LMEANSL,  LGDWDLY,  LSLPMIX
 USE YOS_CMF_MAP,    ONLY: D2NXTDST, D2GRAREA, D2ELEVTN, D2RIVLEN, &
                         & D2RIVWTH, D2RIVHGT, D2FLDHGT, D2RIVELV, &
                         & D2FLDGRD, D2RIVMAN, D2RIVSTOMAX, D2FLDSTOMAX,  &
                         & DFRCINC,  NSEQALL,  NSEQMAX, D2MEANSL, D2DWNELV, &
-                        & D2GDWDLY, I2MASK
+                        & D2GDWDLY, I2MASK, D2RIVSHP
 IMPLICIT NONE
+INTEGER(KIND=JPIM)      :: ISEQ
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -645,6 +649,7 @@ ALLOCATE( D2RIVWTH(NSEQMAX,1) )
 ALLOCATE( D2RIVHGT(NSEQMAX,1) )
 ALLOCATE( D2FLDHGT(NSEQMAX,1,NLFP) )
 ALLOCATE( D2RIVMAN(NSEQMAX,1) )
+ALLOCATE( D2RIVSHP(NSEQMAX,1) )
 ALLOCATE( D2MEANSL(NSEQMAX,1) )
 ALLOCATE( D2DWNELV(NSEQMAX,1) )
 ALLOCATE( D2GDWDLY(NSEQMAX,1) )
@@ -657,6 +662,7 @@ D2RIVLEN(:,:)  =0._JPRB
 D2RIVWTH(:,:)  =0._JPRB
 D2FLDHGT(:,:,:)=0._JPRB
 D2RIVMAN(:,:)  =0._JPRB
+D2RIVSHP(:,:)  =0._JPRB
 D2MEANSL(:,:)  =0._JPRB
 D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
@@ -678,8 +684,16 @@ WRITE(LOGNAM,*) 'TOPO_INIT: calc river channel parameters'
 ALLOCATE(D2RIVSTOMAX(NSEQMAX,1))
 ALLOCATE(D2RIVELV(NSEQMAX,1))
 
+IF ( .NOT. LRIVSHP ) THEN
+  D2RIVSHP(:, :) = 10**(7) ! set number big ebough to make 1/s -> 0
+END IF
+
 IF ( LFPLAIN ) THEN
   D2RIVSTOMAX(:,:) = D2RIVLEN(:,:) * D2RIVWTH(:,:) * D2RIVHGT(:,:)
+ELSE IF ( LRIVSHP ) THEN
+  DO ISEQ=1, NSEQMAX
+      D2RIVSTOMAX(ISEQ,1) = D2RIVLEN(ISEQ,1) * D2RIVWTH(ISEQ,1) * D2RIVHGT(ISEQ,1) * (1.-(1.*(D2RIVSHP(ISEQ,1)+1.)**(-1.)))
+  end do
 ELSE
   WRITE(LOGNAM,*) 'TOPO_INIT: no floodplain (rivstomax=1.D18)'
   D2RIVSTOMAX(:,:) = 1.D18
@@ -720,7 +734,7 @@ ALLOCATE(D2TEMP(NSEQMAX,1))
 
 TMPNAM=INQUIRE_FID()
 
-WRITE(LOGNAM,*)'TOPO_INIT: unit-catchment area : ',TRIM(CGRAREA) 
+WRITE(LOGNAM,*)'TOPO_INIT: unit-catchment area : ',TRIM(CGRAREA)
 OPEN(TMPNAM,FILE=CGRAREA,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
 READ(TMPNAM,REC=1) R2TEMP(:,:)
   IF( LMAPEND ) CALL CONV_END(R2TEMP,NX,NY)
@@ -781,6 +795,13 @@ READ(TMPNAM,REC=1) R2TEMP(:,:)
 CALL MAP2VEC(R2TEMP,D2RIVMAN)
 CLOSE(TMPNAM)
 
+WRITE(LOGNAM,*)'TOPO_INIT: channel geometry parameter "s" : ',TRIM(CRIVSHP)
+OPEN(TMPNAM,FILE=CRIVSHP,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+READ(TMPNAM,REC=1) R2TEMP(:,:)
+  IF( LMAPEND ) CALL CONV_END(R2TEMP,NX,NY)
+CALL MAP2VEC(R2TEMP,D2RIVSHP)
+CLOSE(TMPNAM)
+
 IF( LGDWDLY )THEN
   WRITE(LOGNAM,*)'TOPO_INIT: groundwater delay parameter: ',TRIM(CGDWDLY)
   OPEN(TMPNAM,FILE=TRIM(CGDWDLY),FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
@@ -816,7 +837,7 @@ END SUBROUTINE READ_TOPO_BIN
 !==========================================================
 SUBROUTINE READ_TOPO_CDF
 #ifdef UseCDF
-USE NETCDF 
+USE NETCDF
 USE CMF_UTILS_MOD,            ONLY: NCERROR,MAP2VEC
 IMPLICIT NONE
 !* local variables
@@ -838,47 +859,52 @@ CALL MAP2VEC(R2TEMP,D2GRAREA)
 
 WRITE(LOGNAM,*)'TOPO_INIT: elevtn:',TRIM(CRIVCLINC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'elevtn',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2ELEVTN)
 
 WRITE(LOGNAM,*)'TOPO_INIT: nxtdst:',TRIM(CRIVCLINC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'nxtdst',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2NXTDST)
 
 WRITE(LOGNAM,*)'TOPO_INIT: rivlen:',TRIM(CRIVCLINC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'rivlen',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2RIVLEN)
 
 WRITE(LOGNAM,*)'TOPO_INIT: fldhgt:',TRIM(CRIVCLINC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'fldhgt',VARID),'getting id' )
 DO ILEV=1,NLFP
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP,(/1,1,ILEV/),(/NX,NY,1/)),'reading data' ) 
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP,(/1,1,ILEV/),(/NX,NY,1/)),'reading data' )
   CALL MAP2VEC(R2TEMP,D2TEMP)
   D2FLDHGT(:,:,ILEV)=D2TEMP(:,:)
 ENDDO
 
 CALL NCERROR( NF90_CLOSE(NCID))
 
-!!========== 
+!!==========
 !! PAR FILE (river channel / groundwater parameters)
 CALL NCERROR (NF90_OPEN(CRIVPARNC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVPARNC) )
 
 WRITE(LOGNAM,*)'TOPO_INIT: rivwth:',TRIM(CRIVPARNC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'rivwth',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2RIVWTH)
 
 WRITE(LOGNAM,*)'TOPO_INIT: rivhgt:',TRIM(CRIVPARNC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'rivhgt',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2RIVHGT)
 
 WRITE(LOGNAM,*)'TOPO_INIT: rivman:',TRIM(CRIVPARNC)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'rivman',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2RIVMAN)
+
+WRITE(LOGNAM,*)'TOPO_INIT: rivshp:',TRIM(CRIVPARNC)
+CALL NCERROR ( NF90_INQ_VARID(NCID,'rivshp',VARID),'getting id' )
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
+CALL MAP2VEC(R2TEMP,D2RIVSHP)
 
 IF ( LGDWDLY ) THEN
   WRITE(LOGNAM,*)'TOPO_INIT: GDWDLY:',TRIM(CRIVPARNC)
@@ -887,8 +913,8 @@ IF ( LGDWDLY ) THEN
     WRITE(LOGNAM,*)'TOPO_INIT: GDWDLY: not present, setting to zero'
     R2TEMP(:,:) = 0._JPRB
   ELSE
-    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
-  ENDIF 
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
+  ENDIF
   CALL MAP2VEC(R2TEMP,D2GDWDLY)
 ENDIF
 
@@ -899,16 +925,16 @@ ENDIF
 
 CALL NCERROR( NF90_CLOSE(NCID))
 
-!!========== 
+!!==========
 !! MEAN SEA LEVEL FILE
 IF( LMEANSL ) THEN
   CALL NCERROR (NF90_OPEN(CMEANSLNC,NF90_NOWRITE,NCID),'opening '//TRIM(CMEANSLNC) )
   WRITE(LOGNAM,*)'TOPO_INIT: rivhgt:',TRIM(CMEANSLNC)
   CALL NCERROR ( NF90_INQ_VARID(NCID,'meansl',VARID),'getting id' )
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
   CALL MAP2VEC ( R2TEMP,D2MEANSL  )
   CALL NCERROR ( NF90_CLOSE(NCID) )
-ENDIF 
+ENDIF
 
 DEALLOCATE(R2TEMP)
 DEALLOCATE(D2TEMP)
@@ -953,7 +979,7 @@ END SUBROUTINE SET_FLDSTG
 !==========================================================
 SUBROUTINE SET_SLOPEMIX    !! only used in IFS0
 #ifdef UseCDF
-USE NETCDF 
+USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: NCERROR,MAP2VECI
 
 IMPLICIT NONE
@@ -967,8 +993,8 @@ INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
   IF (STATUS /= 0 ) THEN
     WRITE(LOGNAM,*)'TOPO_INIT: mask_slope: LSLPMIX should be set to FALSE: ABORTING!'
     STOP 9
-  ENDIF 
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TEMP),'reading data' ) 
+  ENDIF
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TEMP),'reading data' )
   CALL MAP2VECI(I2TEMP,I2MASK)
   I0=0
   I1=0
@@ -976,15 +1002,15 @@ INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
     IF (I2MASK(ISEQ,1) == 1 ) THEN
       I1=I1+1
     ENDIF
-    IF (I2MASK(ISEQ,1) == 0 ) THEN 
+    IF (I2MASK(ISEQ,1) == 0 ) THEN
       I0=I0+1
     ENDIF
   ENDDO
   WRITE(LOGNAM,*)'TOPO_INIT: sum(mask==0), sum(mask==1)',I0,I1
-  IF ( I0+I1 .NE. NSEQALL ) THEN 
+  IF ( I0+I1 .NE. NSEQALL ) THEN
      WRITE(LOGNAM,*)'TOPO_INIT: mask==0 + mask == 1 does not match NSEQALL.. something wrong, aborting'
      STOP 9
-  ENDIF 
+  ENDIF
 
   DEALLOCATE(I2TEMP)
 #endif

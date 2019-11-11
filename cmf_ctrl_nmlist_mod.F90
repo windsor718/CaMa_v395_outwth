@@ -3,7 +3,7 @@ MODULE CMF_CTRL_NMLIST_MOD
 !* PURPOSE: read CaMa-Flood Model configulations from namelist ("input_flood.nam" as default)
 !
 !* CONTAINS:
-! -- CMF_CONFIG_NAMELIST  : read namelist for CaMa-Flood 
+! -- CMF_CONFIG_NAMELIST  : read namelist for CaMa-Flood
 ! -- CMF_CONFIG_CHECK     : check config conflict
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  29Jul 2019
@@ -13,8 +13,8 @@ MODULE CMF_CTRL_NMLIST_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
@@ -23,7 +23,7 @@ USE YOS_CMF_INPUT,           ONLY: LOGNAM
 IMPLICIT NONE
 CONTAINS
 !####################################################################
-! -- CMF_CONFIG_NAMELIST  : read namelist for CaMa-Flood 
+! -- CMF_CONFIG_NAMELIST  : read namelist for CaMa-Flood
 ! -- CMF_CONFIG_CHECK     : check config conflict
 !
 !####################################################################
@@ -32,7 +32,8 @@ USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 ! run version
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
-                            & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE
+                            & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
+                            & LRIVSHP
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -44,7 +45,8 @@ IMPLICIT NONE
 !
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT, &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT, &
-                   LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE
+                   LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
+                   LRIVSHP
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -54,10 +56,10 @@ NAMELIST/NPARAM/   PMANRIV, PMANFLD, PGRV,    PDSTMTH, PCADP,   PMINSLP, &
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!--------------------"
 
-! *** 0. SET INPUT UNIT AND OPEN FILE 
+! *** 0. SET INPUT UNIT AND OPEN FILE
 NSETFILE=INQUIRE_FID()               !!  for namelist
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
-WRITE(LOGNAM,*) "CMF::CONFIG_NMLIST: namelist opened: ", TRIM(CSETFILE), NSETFILE 
+WRITE(LOGNAM,*) "CMF::CONFIG_NMLIST: namelist opened: ", TRIM(CSETFILE), NSETFILE
 
 !============================
 !*** 1. basic simulation run version
@@ -86,6 +88,8 @@ LLEAPYR  = .TRUE.            !! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.           !! true: for map data endian conversion
 LBITSAFE = .FALSE.           !! true: for Bit Identical simulation (avoid OSM ATOMIC)
 
+LRIVSHP = .FALSE.            !! true: use river cross section geometry (allowing non-rectangluar cross section)
+
 !* change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NRUNVER)
@@ -113,7 +117,7 @@ WRITE(LOGNAM,*) "LGRIDMAP ", LGRIDMAP
 WRITE(LOGNAM,*) "LLEAPYR  ", LLEAPYR
 WRITE(LOGNAM,*) "LMAPEND  ", LMAPEND
 WRITE(LOGNAM,*) "LBITSAFE ", LBITSAFE
-
+WRITE(LOGNAM,*) "LRIVSHP  ", LRIVSHP
 !============================
 !*** 2. set model dimention & time
 
@@ -160,7 +164,7 @@ IF( CDIMINFO/="NONE" )THEN
   READ(TMPNAM,*) NXIN
   READ(TMPNAM,*) NYIN
   READ(TMPNAM,*) INPN
-  READ(TMPNAM,*) 
+  READ(TMPNAM,*)
   IF( LGRIDMAP )THEN
     READ(TMPNAM,*) WEST
     READ(TMPNAM,*) EAST
@@ -221,7 +225,7 @@ WRITE(LOGNAM,*) "CSUFPTH  ", TRIM(CSUFPTH)
 WRITE(LOGNAM,*) "CSUFCDF  ", TRIM(CSUFCDF)
 
 !===============================
-!*** CLOSE FILE 
+!*** CLOSE FILE
 CLOSE(NSETFILE)
 
 WRITE(LOGNAM,*) "CMF::CONFIG_NMLIST: end "

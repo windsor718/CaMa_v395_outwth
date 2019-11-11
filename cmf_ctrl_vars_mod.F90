@@ -12,14 +12,14 @@ MODULE CMF_CTRL_VARS_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 IMPLICIT NONE
-CONTAINS 
+CONTAINS
 !####################################################################
 ! -- CMF_PROG_INIT      : Initialize Prognostic variables (include restart data handling)
 ! -- CMF_DIAG_INIT      : Initialize Diagnostic variables
@@ -39,7 +39,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 
-!*** 1. ALLOCATE 
+!*** 1. ALLOCATE
 ND2PROG=12
 ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
@@ -60,7 +60,7 @@ D2GDWRTN     => D2PROG(:,:,12)
 D2PROG(:,:,:) = 0._JPRB
 
 !============================
-!*** 2a. set to zero 
+!*** 2a. set to zero
 D2RUNOFF(:,:)     = 0._JPRB
 D2ROFSUB(:,:)     = 0._JPRB
 D2RIVSTO(:,:)     = 0._JPRB
@@ -111,7 +111,7 @@ DO ISEQ=1, NSEQALL
   DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
   D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
 END DO
-    
+
 END SUBROUTINE STORAGE_SEA_SURFACE
 ! ==================================================
 
@@ -128,7 +128,7 @@ SUBROUTINE CMF_DIAG_INIT
 USE YOS_CMF_MAP,        ONLY: NSEQMAX,NPTHOUT,NPTHLEV
 USE YOS_CMF_DIAG,       ONLY: N2DIAG, D2DIAG, &
                             &   D2RIVINF, D2RIVDPH, D2RIVVEL, D2FLDINF, D2FLDDPH, D2FLDFRC, D2FLDARE, &
-                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS
+                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS, D2OUTWTH
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_AVG, D2DIAG_AVG, NADD, &
                             &   D2RIVOUT_AVG, D2FLDOUT_AVG, D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, &
                             &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG
@@ -142,7 +142,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::DIAG_INIT: initialize diagnostic variables"
 
 !*** 1. snapshot 2D diagnostics
-N2DIAG=13
+N2DIAG=14
 ALLOCATE(D2DIAG(NSEQMAX,1,N2DIAG))
 D2DIAG(:,:,:) = 0._JPRB
 D2RIVINF => D2DIAG(:,:,1)
@@ -158,12 +158,13 @@ D2SFCELV => D2DIAG(:,:,10)
 D2OUTFLW => D2DIAG(:,:,11)
 D2STORGE => D2DIAG(:,:,12)
 D2OUTINS => D2DIAG(:,:,13)
+D2OUTWTH => D2DIAG(:,:,14)
 
 !============================
 !*** 2a. time-average 2D diagnostics
 N2DIAG_AVG=8
 ALLOCATE(D2DIAG_AVG(NSEQMAX,1,N2DIAG_AVG))
-D2DIAG_AVG(:,:,:) = 0._JPRB 
+D2DIAG_AVG(:,:,:) = 0._JPRB
 D2RIVOUT_AVG => D2DIAG_AVG(:,:,1)
 D2FLDOUT_AVG => D2DIAG_AVG(:,:,2)
 D2OUTFLW_AVG => D2DIAG_AVG(:,:,3)
@@ -177,13 +178,13 @@ NADD=0
 
 !*** 2b time-average 1D Diagnostics (bifurcation channel)
 ALLOCATE(D1PTHFLW_AVG(NPTHOUT,NPTHLEV))
-D1PTHFLW_AVG(:,:) = 0._JPRB 
+D1PTHFLW_AVG(:,:) = 0._JPRB
 
 !============================
-!*** 3. Maximum 2D Diagnostics 
+!*** 3. Maximum 2D Diagnostics
 N2DIAG_MAX=3
 ALLOCATE(D2DIAG_MAX(NSEQMAX,1,N2DIAG_MAX))
-D2DIAG_MAX(:,:,:) = 0._JPRB 
+D2DIAG_MAX(:,:,:) = 0._JPRB
 D2STORGE_MAX => D2DIAG_MAX(:,:,1)
 D2OUTFLW_MAX => D2DIAG_MAX(:,:,2)
 D2RIVDPH_MAX => D2DIAG_MAX(:,:,3)

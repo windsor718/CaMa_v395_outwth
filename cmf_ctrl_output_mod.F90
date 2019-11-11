@@ -1,6 +1,6 @@
 MODULE CMF_CTRL_OUTPUT_MOD
 !==========================================================
-!* PURPOSE: Control CaMa-Flood standard output file (binary / netCDF)  
+!* PURPOSE: Control CaMa-Flood standard output file (binary / netCDF)
 !
 !* CONTAINS:
 ! -- CMF_OUTPUT_NMLIST : Read output file info from namelist
@@ -14,8 +14,8 @@ MODULE CMF_CTRL_OUTPUT_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
@@ -27,12 +27,12 @@ IMPLICIT NONE
 SAVE
 !*** NAMELIST/NOUTPUT/ from inputnam
 CHARACTER(LEN=256)              ::  COUTDIR           ! OUTPUT DIRECTORY
-CHARACTER(LEN=256)              ::  CVARSOUT          ! Comma-separated list of output variables to save 
+CHARACTER(LEN=256)              ::  CVARSOUT          ! Comma-separated list of output variables to save
 CHARACTER(LEN=256)              ::  COUTTAG           ! Output Tag Name for each experiment
 !
 LOGICAL                         ::  LOUTVEC           ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
 LOGICAL                         ::  LOUTCDF           ! true for netcdf outptu false for binary
-INTEGER(KIND=JPIM)              ::  NDLEVEL           ! NETCDF DEFLATION LEVEL 
+INTEGER(KIND=JPIM)              ::  NDLEVEL           ! NETCDF DEFLATION LEVEL
 !
 NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT
 !
@@ -42,17 +42,17 @@ PARAMETER                         (NVARS=30)          ! actual   output var numb
 INTEGER(KIND=JPIM)              :: NVARSOUT
 INTEGER(KIND=JPIM)              :: IRECOUT            ! Output file irec
 
-!*** TYPE for output file    
+!*** TYPE for output file
 TYPE TVAROUT
 CHARACTER(LEN=256)              :: CVNAME             ! output variable name
 CHARACTER(LEN=256)              :: CVLNAME            ! output variable long name
 CHARACTER(LEN=256)              :: CVUNITS            ! output units
-CHARACTER(LEN=256)              :: CFILE              ! output full path file name 
+CHARACTER(LEN=256)              :: CFILE              ! output full path file name
 INTEGER(KIND=JPIM)              :: BINID              ! output binary output file ID
 INTEGER(KIND=JPIM)              :: NCID               ! output netCDF output file ID
 INTEGER(KIND=JPIM)              :: VARID              ! output netCDF output variable ID
-INTEGER(KIND=JPIM)              :: TIMID              ! output netCDF time   variable ID 
-END TYPE TVAROUT 
+INTEGER(KIND=JPIM)              :: TIMID              ! output netCDF time   variable ID
+END TYPE TVAROUT
 TYPE(TVAROUT),ALLOCATABLE       :: VAROUT(:)          ! output variable TYPE set
 
 CONTAINS
@@ -76,7 +76,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 !*** 1. open namelist
 NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
-WRITE(LOGNAM,*) "CMF::OUTPUT_NMLIST: namelist OPEN in unit:", TRIM(CSETFILE), NSETFILE 
+WRITE(LOGNAM,*) "CMF::OUTPUT_NMLIST: namelist OPEN in unit:", TRIM(CSETFILE), NSETFILE
 
 !*** 2. default value
 COUTDIR="./"
@@ -130,7 +130,7 @@ USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 USE ABORT_SURF_MOD,          ONLY: ABORT_SURF
 #endif
 IMPLICIT NONE
-!* Local variables 
+!* Local variables
 CHARACTER(LEN=256)              :: CTIME, CTMP
 INTEGER(KIND=JPIM)              :: JF,J,J0
 CHARACTER(LEN=256)              :: CVNAMES(NVARS)
@@ -139,7 +139,7 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) "CMF::OUTPUT_INIT: check output variables"
-!! Start by finding out # of output variables 
+!! Start by finding out # of output variables
 NVARSOUT=0
 J0=1
 DO J=1,LEN(TRIM(CVARSOUT))
@@ -152,7 +152,7 @@ DO J=1,LEN(TRIM(CVARSOUT))
     J0=J+1
   ENDIF
 ENDDO
-! Last one 
+! Last one
 IF ( J0 < LEN(TRIM(CVARSOUT)) ) THEN
   J=LEN(TRIM(CVARSOUT))
   CTMP=TRIM(ADJUSTL(CVARSOUT(J0:J)))
@@ -160,17 +160,17 @@ IF ( J0 < LEN(TRIM(CVARSOUT)) ) THEN
      NVARSOUT=NVARSOUT+1
      CVNAMES(NVARSOUT)=CTMP
   ENDIF
-ENDIF 
+ENDIF
 
 IF ( NVARSOUT == 0 ) THEN
   WRITE(LOGNAM,*) "CMF::OUTPUT_INIT: No output files will be produced!"
   RETURN
-ENDIF 
+ENDIF
 
 ALLOCATE(VAROUT(NVARSOUT))
 WRITE(CTIME,'(A14,I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2)') 'seconds since ',ISYYYY,'-',ISMM,'-',ISDD,' ',ISHOUR,":",ISMIN
 
-!* Loop on variables and create files 
+!* Loop on variables and create files
 DO JF=1,NVARSOUT
   WRITE(LOGNAM,*) "Creating output for variable:", TRIM( CVNAMES(JF) )
   SELECT CASE (CVNAMES(JF))
@@ -202,15 +202,19 @@ DO JF=1,NVARSOUT
     CASE ('flddph')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='floodplain depth'
-      VAROUT(JF)%CVUNITS='m'  
+      VAROUT(JF)%CVUNITS='m'
     CASE ('fldfrc')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='flooded fraction'
-      VAROUT(JF)%CVUNITS='0-1'  
+      VAROUT(JF)%CVUNITS='0-1'
     CASE ('fldare')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='flooded area'
       VAROUT(JF)%CVUNITS='m2'
+    CASE ('outwth')
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='river width (in or out channel)'
+      VAROUT(JF)%CVUNITS='m'
 
     CASE ('sfcelv')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -253,28 +257,28 @@ DO JF=1,NVARSOUT
     CASE ('gwout')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water discharge'
-      VAROUT(JF)%CVUNITS='m3/s'  
+      VAROUT(JF)%CVUNITS='m3/s'
     CASE ('runoff')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='Surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%CVUNITS='m3/s'
     CASE ('runoffsub')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='sub-surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%CVUNITS='m3/s'
 
     CASE ('maxsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum storage'
-      VAROUT(JF)%CVUNITS='m3'  
+      VAROUT(JF)%CVUNITS='m3'
     CASE ('maxflw')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum discharge'
-      VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%CVUNITS='m3/s'
     CASE ('maxdph')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum river depth'
-      VAROUT(JF)%CVUNITS='m' 
+      VAROUT(JF)%CVUNITS='m'
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
 #ifdef IFS
@@ -331,7 +335,7 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)  :: TIMEID,VARID,LATID,LONID
 !============
 VAROUT(JF)%CFILE=TRIM(COUTDIR)//'o_'//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFCDF)
-! Create file 
+! Create file
 CALL NCERROR( NF90_CREATE(VAROUT(JF)%CFILE,NF90_NETCDF4,VAROUT(JF)%NCID),&
               'CREATING FILE:'//TRIM(VAROUT(JF)%CFILE) )
 !=== set dimension ===
@@ -348,7 +352,7 @@ CALL NCERROR( NF90_DEF_VAR(VAROUT(JF)%NCID, 'lon', NF90_FLOAT, (/LONID/), VARID)
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VARID, 'long_name','longitude') )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VARID, 'units','degrees_east') )
 
-CALL NCERROR( NF90_DEF_VAR(VAROUT(JF)%NCID, 'time', NF90_DOUBLE, (/TIMEID/), VAROUT(JF)%TIMID) ) 
+CALL NCERROR( NF90_DEF_VAR(VAROUT(JF)%NCID, 'time', NF90_DOUBLE, (/TIMEID/), VAROUT(JF)%TIMID) )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%TIMID, 'long_name','time') )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%TIMID, 'units',CTIME) )
 
@@ -387,15 +391,15 @@ END SUBROUTINE CMF_OUTPUT_INIT
 !####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
 #ifdef IFS
-USE ABORT_SURF_MOD,     ONLY: ABORT_SURF 
+USE ABORT_SURF_MOD,     ONLY: ABORT_SURF
 #endif
 ! save results to output files
 ! -- Called either from "MAIN/Coupler" or CMF_DRV_ADVANCE
 USE YOS_CMF_INPUT,      ONLY: NX,NY
 USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
-USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
+USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2FLDSTO, D2GDWSTO
+USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2FLDDPH, D2FLDFRC, D2FLDARE, D2SFCELV, D2STORGE, D2OUTWTH, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX
@@ -410,7 +414,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of time step , NFPPH: output frequency (hour)
 
   !*** 1. update IREC & calc average variable
-  IRECOUT=IRECOUT+1 
+  IRECOUT=IRECOUT+1
   WRITE(LOGNAM,*) 'CMF::OUTPUT_WRITE: write at time: ', JYYYYMMDD, JHHMM, IRECOUT
 
   !*** 2. check variable name & allocate data to pointer DVEC
@@ -434,6 +438,8 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2FLDFRC
       CASE ('fldare')
         D2VEC => D2FLDARE
+      CASE ('outwth')
+        D2VEC => D2OUTWTH
 
       CASE ('sfcelv')
         D2VEC => D2SFCELV
@@ -467,9 +473,9 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2GDWRTN_AVG
 
       CASE ('runoff')             !!  compatibility for previous file name
-        D2VEC =>  D2RUNOFF_AVG  
+        D2VEC =>  D2RUNOFF_AVG
       CASE ('runoffsub')           !!  compatibility for previous file name
-        D2VEC =>  D2ROFSUB_AVG  
+        D2VEC =>  D2ROFSUB_AVG
       CASE ('rofsfc')
         D2VEC =>  D2RUNOFF_AVG
       CASE ('rofsub')
@@ -568,7 +574,7 @@ END SUBROUTINE WRTE_OUTVEC
 !==========================================================
 SUBROUTINE WRTE_OUTCDF
 #ifdef UseCDF
-USE NETCDF 
+USE NETCDF
 USE YOS_CMF_TIME,            ONLY: KMINSTART,KMINNEXT
 USE CMF_UTILS_MOD,           ONLY: NCERROR,VEC2MAP
 IMPLICIT NONE
@@ -580,10 +586,10 @@ CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%TIMID,XTIME,(/IRECOUT/)) )
 
 CALL VEC2MAP(D2VEC,Z2MAP)
 CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%VARID,Z2MAP(1:NX,1:NY),(/1,1,IRECOUT/),(/NX,NY,1/)) )
-! Comment out this as it slows down significantly the writting in the cray  
-!CALL NCERROR( NF90_SYNC(VAROUT(JF)%NCID) )  
+! Comment out this as it slows down significantly the writting in the cray
+!CALL NCERROR( NF90_SYNC(VAROUT(JF)%NCID) )
 #endif
-END SUBROUTINE WRTE_OUTCDF 
+END SUBROUTINE WRTE_OUTCDF
 !==========================================================
 
 END SUBROUTINE CMF_OUTPUT_WRITE
@@ -651,12 +657,12 @@ IF( LOUTVEC )THEN
 
   WRITE(LOGNAM,*) "LOUTVEC: write map2vec conversion table", TRIM(CFILE1), TRIM(CFILE2)
 
-  
+
   TMPNAM=INQUIRE_FID()
   OPEN(TMPNAM,FILE=CFILE1,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
   WRITE(TMPNAM,REC=1) I2REGION
   CLOSE(TMPNAM)
-  
+
   OPEN(TMPNAM,FILE=CFILE2,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
   WRITE(TMPNAM,REC=1) I1SEQX
   WRITE(TMPNAM,REC=2) I1SEQY

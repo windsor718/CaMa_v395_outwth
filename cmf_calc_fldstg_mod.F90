@@ -8,8 +8,8 @@ MODULE CMF_CALC_FLDSTG_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 CONTAINS
@@ -22,9 +22,10 @@ SUBROUTINE CMF_CALC_FLDSTG
 USE PARKIND1,           ONLY: JPIM, JPRB
 USE YOS_CMF_INPUT,      ONLY: NLFP
 USE YOS_CMF_MAP,        ONLY: NSEQALL
-USE YOS_CMF_MAP,        ONLY: D2GRAREA, D2RIVLEN, D2RIVWTH, D2RIVELV, D2RIVSTOMAX, D2FLDSTOMAX, D2FLDGRD, DFRCINC
+USE YOS_CMF_MAP,        ONLY: D2GRAREA, D2RIVLEN, D2RIVWTH, D2RIVHGT, D2RIVSHP, &
+                            & D2RIVELV, D2RIVSTOMAX, D2FLDSTOMAX, D2FLDGRD, DFRCINC
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2FLDSTO
-USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2FLDDPH, D2FLDFRC, D2FLDARE, D2SFCELV, DGLBRIVSTO, DGLBFLDSTO, DGLBFLDARE
+USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2FLDDPH, D2FLDFRC, D2FLDARE, D2SFCELV, D2OUTWTH, DGLBRIVSTO, DGLBFLDSTO, DGLBFLDARE
 IMPLICIT NONE
 
 !*** LOCAL
@@ -68,7 +69,8 @@ DO ISEQ=1, NSEQALL
 !
     D2FLDSTO(ISEQ,1) = DSTOALL - D2RIVSTO(ISEQ,1)
     D2FLDSTO(ISEQ,1) = MAX( D2FLDSTO(ISEQ,1), 0.D0 )
-    D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1) + DWTHPRE + DWTHNOW ) * (DWTHINC*10.D0)**(-1.)
+    D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1) + DWTHPRE + DWTHNOW ) * (DWTHINC*10.D0)**(-1.) ! BUG: (DWTHINC*NLFP) OR (DWTHINC*DFRCINC**(-1.)) ?
+    D2OUTWTH(ISEQ,1) = DWTHPRE + DWTHNOW
     D2FLDFRC(ISEQ,1) = MAX( D2FLDFRC(ISEQ,1),0.D0)
     D2FLDFRC(ISEQ,1) = MIN( D2FLDFRC(ISEQ,1),1.D0)
     D2FLDARE(ISEQ,1) = D2GRAREA(ISEQ,1)*D2FLDFRC(ISEQ,1)
@@ -76,6 +78,8 @@ DO ISEQ=1, NSEQALL
     D2RIVSTO(ISEQ,1) = DSTOALL
     D2RIVDPH(ISEQ,1) = DSTOALL * D2RIVLEN(ISEQ,1)**(-1.) * D2RIVWTH(ISEQ,1)**(-1.)
     D2RIVDPH(ISEQ,1) = MAX( D2RIVDPH(ISEQ,1), 0.D0 )
+    D2OUTWTH(ISEQ,1) = D2RIVWTH(ISEQ,1) * (D2RIVDPH(ISEQ,1) * D2RIVHGT(ISEQ,1)**(-1.))**(1. * D2RIVSHP(ISEQ,1)**(-1.))
+    D2OUTWTH(ISEQ,1) = MAX( D2OUTWTH(ISEQ,1), 0.D0 )
     D2FLDSTO(ISEQ,1) = 0.D0
     D2FLDDPH(ISEQ,1) = 0.D0
     D2FLDFRC(ISEQ,1) = 0.D0

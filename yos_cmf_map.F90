@@ -7,13 +7,13 @@ MODULE YOS_CMF_MAP
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1, ONLY: JPIM, JPRM, JPRB
 IMPLICIT NONE
-SAVE 
+SAVE
 !================================================
 !*** river network
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2NEXTX(:,:)       !! POINT DOWNSTREAM HORIZONTAL
@@ -47,11 +47,12 @@ REAL(KIND=JPRB),ALLOCATABLE              ::  D2NXTDST(:,:)      !! DISTANCE TO T
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVLEN(:,:)      !! RIVER LENGTH [M]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVWTH(:,:)      !! RIVER WIDTH [M]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVMAN(:,:)      !! RIVER MANNING COEFFICIENT
+REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVSHP(:,:)      !! RIVER SHAPE PARAMETER [-]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVHGT(:,:)      !! RIVER HEIGHT [M]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDHGT(:,:,:)    !! FLOODPLAIN HEIGHT [M]
 
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2GDWDLY(:,:)      !! Ground water delay
-INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask 
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask
 
 !================================================
 !*** Floodplain Topography (diagnosed)
