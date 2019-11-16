@@ -33,6 +33,42 @@ USE NETCDF
       data                    WO   /0.00/
       data                    WMIN /10.0/
 
+    	data                    b1g1 /0.328523411998739/
+    	data                    b1g2 /-0.136629598093381/
+    	data                    b1g3 /0.226782890677302/
+    	data                    b1g4 /0.407317315366405/
+    	data                    b1g5 /0.0573936111784235/
+    	data                    b1g6 /-0.000827027398309836/
+    	data                    b1g7 /7.73363755705211e-06/
+    	data                    b1g8 /-0.218593761377831/
+
+    	data                    b2g1 /-1.73499845293949/
+    	data                    b2g2 /1.86961902684339/
+    	data                    b2g3 /-0.0787095731609086/
+    	data                    b2g4 /-1.70280956920105/
+    	data                    b2g5 /-0.236031863429058/
+    	data                    b2g6 /0.00114799994407101/
+    	data                    b2g7 /3.43885058357733e-06/
+    	data                    b2g8 /1.73575973862887/
+
+    	data                    b3g1 /-0.0914107976436178/
+    	data                    b3g2 /0.0400444500138610/
+    	data                    b3g3 /0.387741337558434/
+    	data                    b3g4 /-0.152454059221963/
+    	data                    b3g5 /-0.0859683978597510/
+    	data                    b3g6 /0.00121037617690324/
+    	data                    b3g7 /-1.24573143624190e-05/
+    	data                    b3g8 /0.515523126751616/
+    
+    	data                    b4g1 /0.440010360908978/
+    	data                    b4g2 /-0.291924093276058/
+    	data                    b4g3 /0.00781944059584046/
+    	data                    b4g4 /0.0164084553274571/
+    	data                    b4g5 /0.0337017710333279/
+    	data                    b4g6 /-0.000464008615742078/
+    	data                    b4g7 /4.69370047950512e-06/
+      data                    b4g8 /-0.204804996998889/
+
 ! river network map parameters
       integer             ::  ix, iy
       integer             ::  nx, ny          !! river map grid number
@@ -117,11 +153,11 @@ USE NETCDF
       open(11,file=diminfo,form='formatted')
       read(11,*) nx
       read(11,*) ny
-      read(11,*) 
-      read(11,*) 
-      read(11,*) 
-      read(11,*) 
-      read(11,*) 
+      read(11,*)
+      read(11,*)
+      read(11,*)
+      read(11,*)
+      read(11,*)
       read(11,*) west
       read(11,*) east
       read(11,*) north
@@ -136,7 +172,7 @@ USE NETCDF
       allocate(rivout(nx,ny),rivshp(nx,ny))
       allocate(rivwth(nx,ny),rivhgt(nx,ny),rivhgt_inf(nx,ny),rivman(nx,ny),rivbta(4,nx,ny))
 
-      allocate(lon(nx),lat(ny)) 
+      allocate(lon(nx),lat(ny))
       gsize=(east-west)/real(nx)
       do ix=1,nx
         lon(ix)=west+(real(ix)-0.5)*gsize

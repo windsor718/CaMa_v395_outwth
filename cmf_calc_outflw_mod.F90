@@ -73,34 +73,44 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   DFLW_PRE=DSFCMAX_PRE - D2RIVELV(ISEQ,1)
   DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5D0 ,1.D-6 )                                            !! semi implicit flow depth
 
-  !! calculating hydraulic radius
-  WFLW   = MIN( D2OUTWTH(ISEQ,1), D2RIVWTH(ISEQ,1))
-  DAREA  = WFLW * DFLW_IMP * (1.-(1.*(D2RIVSHP(ISEQ,1)+1.)**(-1.)))  !! flow cross-section via river geometry
-  DFLW_CHN = MIN( DFLW_IMP, D2RIVDPH(ISEQ,1) )  !! channel depth
-  HP = 2*DFLW_CHN / D2RIVWTH(ISEQ,1)  !! h' parameter
-  IF(HP<0.05)THEN  !! very shallow, wetted pelimeter is approximated as Wflow
-    WP = WFLW
-  ELSE IF(HP>=0.05 .and. HP<0.2)THEN  !! Eq.7 in Neal et al. 2015
-    PFRC = D2RIVBTA(ISEQ,1,1)*HP + D2RIVBTA(ISEQ,1,2)*HP*HP  !! pelimeter fraction when 0.05<hp<0.2
-    WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
-  ELSE
-    PFRC = D2RIVBTA(ISEQ,1,1)*0.2 + D2RIVBTA(ISEQ,1,2)*0.2*0.2 &
+  IF(LRIVSHP)THEN
+    !! calculating hydraulic radius using the equation and coefficients from Neal et al. 2015
+    WFLW   = MIN( D2OUTWTH(ISEQ,1), D2RIVWTH(ISEQ,1))
+    DAREA  = WFLW * DFLW_IMP * (1.-(1.*(D2RIVSHP(ISEQ,1)+1.)**(-1.)))  !! flow cross-section via river geometry
+    DFLW_CHN = MIN( DFLW_IMP, D2RIVDPH(ISEQ,1) )  !! channel depth
+    HP = 2*DFLW_CHN / D2RIVWTH(ISEQ,1)  !! h' parameter
+    IF(HP<0.05)THEN  !! very shallow, wetted pelimeter is approximated as Wflow
+      WP = WFLW
+    ELSE IF(HP>=0.05 .and. HP<0.2)THEN  !! Eq.7 in Neal et al. 2015
+      PFRC = D2RIVBTA(ISEQ,1,1)*HP + D2RIVBTA(ISEQ,1,2)*HP*HP  !! pelimeter fraction when 0.05<hp<0.2
+      WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
+    ELSE  !! Eq.8 in Neal et al. 2015; the accuracy may drop for hp > 2.0 (very deep channel)
+      PFRC = D2RIVBTA(ISEQ,1,1)*0.2 + D2RIVBTA(ISEQ,1,2)*0.2*0.2 &
            + D2RIVBTA(ISEQ,1,3)*(HP-0.2) + D2RIVBTA(ISEQ,1,4)*(HP-0.2)*(HP-0.2)  !! pelimeter fraction when 0.2<hp
-    WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
-  ENDIF
-  HYDR = DAREA / WP
-  !!
-
-  IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN
-    D2RIVOUT(ISEQ,1) = (D2RIVOUT_PRE(ISEQ,1) + PGRV*DT*DAREA*DSLOPE) &  !! minus here?
+           WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
+    ENDIF
+    HYDR = DAREA / WP
+    !!
+    IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN
+      D2RIVOUT(ISEQ,1) = (D2RIVOUT_PRE(ISEQ,1) + PGRV*DT*DAREA*DSLOPE) &  !! minus here?
         * ( 1.D0 + ((PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(D2RIVOUT_PRE(ISEQ,1))) * (HYDR**(4.D0/3.D0)*DAREA)**(-1.D0)) )**(-1.D0)
-    !DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.D0)                         !! outflow (t-1) [m2/s] (unit width)
-    !D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
-    !                         * ( 1.D0 + PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(DOUT_PRE)*DFLW_IMP**(-7.D0/3.D0) )**(-1.D0)
-    D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.D0)
+      D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.D0)
+    ELSE
+      D2RIVOUT(ISEQ,1) = 0.D0
+      D2RIVVEL(ISEQ,1) = 0.D0
+    ENDIF
   ELSE
-    D2RIVOUT(ISEQ,1) = 0.D0
-    D2RIVVEL(ISEQ,1) = 0.D0
+    !! rectangular channel; depth is assumed as hydraulic radius
+    DAREA  = D2RIVWTH(ISEQ,1) * DFLW  !!  flow cross-section area
+    IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN
+      DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.D0)                         !! outflow (t-1) [m2/s] (unit width)
+      D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
+                             * ( 1.D0 + PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(DOUT_PRE)*DFLW_IMP**(-7.D0/3.D0) )**(-1.D0)
+      D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.D0)
+    ELSE
+      D2RIVOUT(ISEQ,1) = 0.D0
+      D2RIVVEL(ISEQ,1) = 0.D0
+    ENDIF
   ENDIF
 
 !=== Floodplain Flow ===

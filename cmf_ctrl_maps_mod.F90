@@ -34,6 +34,7 @@ CHARACTER(LEN=256)              :: CRIVWTH         !! channel width
 CHARACTER(LEN=256)              :: CRIVHGT         !! channel depth
 CHARACTER(LEN=256)              :: CRIVMAN         !! river manning coefficient
 CHARACTER(len=256)              :: CRIVSHP         !! river cross-section geometry parameter
+CHARACTER(len=256)              :: CRIVBTA         !! wetted perimeter
 !* optional maps
 CHARACTER(LEN=256)              :: CPTHOUT         !! bifurcation channel table
 CHARACTER(LEN=256)              :: CGDWDLY         !! Groundwater Delay Parameter
@@ -44,9 +45,9 @@ CHARACTER(LEN=256)              :: CRIVCLINC       !! river map netcdf
 CHARACTER(LEN=256)              :: CRIVPARNC       !! river parameter netcdf (WIDTH,HEIGHT, Manning, ground wateer delay)
 CHARACTER(LEN=256)              :: CMEANSLNC       !! mean sea level netCDF
 
-NAMELIST/NMAP/     CNEXTXY,  CGRAREA,  CELEVTN,  CNXTDST, CRIVLEN, CFLDHGT, &
-                   CRIVWTH,  CRIVHGT,  CRIVMAN,  CRIVSHP,  CPTHOUT, CGDWDLY, CMEANSL, &
-                   LMAPCDF,  CRIVCLINC,CRIVPARNC,CMEANSLNC
+NAMELIST/NMAP/     CNEXTXY, CGRAREA, CELEVTN, CNXTDST, CRIVLEN, CFLDHGT, &
+                   CRIVWTH, CRIVHGT, CRIVMAN, CRIVSHP, CRIVBTA, CPTHOUT, CGDWDLY, CMEANSL, &
+                   LMAPCDF, CRIVCLINC, CRIVPARNC, CMEANSLNC
 
 
 CONTAINS
@@ -84,6 +85,7 @@ CRIVWTH="./rivwth.bin"
 CRIVHGT="./rivhgt.bin"
 CRIVMAN="./rivman.bin"
 CRIVSHP="./rivshp.bin"
+CRIVBTA="./rivbta.bin"
 
 CPTHOUT="./bifprm.txt"
 CGDWDLY="NONE"
@@ -118,6 +120,7 @@ ELSE
   WRITE(LOGNAM,*)   "CRIVHGT:   ", TRIM(CRIVHGT)
   WRITE(LOGNAM,*)   "CRIVMAN:   ", TRIM(CRIVMAN)
   WRITE(LOGNAM,*)   "CRIVSHP:   ", TRIM(CRIVSHP)
+  WRITE(LOGNAM,*)   "CRIVBTA:   ", TRIM(CRIVBTA)
 
   WRITE(LOGNAM,*)   "CPTHOUT:   ", TRIM(CPTHOUT)
   IF( LGDWDLY )THEN
@@ -631,7 +634,7 @@ USE YOS_CMF_MAP,    ONLY: D2NXTDST, D2GRAREA, D2ELEVTN, D2RIVLEN, &
                         & D2RIVWTH, D2RIVHGT, D2FLDHGT, D2RIVELV, &
                         & D2FLDGRD, D2RIVMAN, D2RIVSTOMAX, D2FLDSTOMAX,  &
                         & DFRCINC,  NSEQALL,  NSEQMAX, D2MEANSL, D2DWNELV, &
-                        & D2GDWDLY, I2MASK, D2RIVSHP
+                        & D2GDWDLY, I2MASK, D2RIVSHP, D2RIVBTA
 IMPLICIT NONE
 INTEGER(KIND=JPIM)      :: ISEQ
 !================================================
@@ -650,6 +653,7 @@ ALLOCATE( D2RIVHGT(NSEQMAX,1) )
 ALLOCATE( D2FLDHGT(NSEQMAX,1,NLFP) )
 ALLOCATE( D2RIVMAN(NSEQMAX,1) )
 ALLOCATE( D2RIVSHP(NSEQMAX,1) )
+ALLOCATE( D2RIVBTA(NSEQMAX,1,4))
 ALLOCATE( D2MEANSL(NSEQMAX,1) )
 ALLOCATE( D2DWNELV(NSEQMAX,1) )
 ALLOCATE( D2GDWDLY(NSEQMAX,1) )
@@ -662,7 +666,10 @@ D2RIVLEN(:,:)  =0._JPRB
 D2RIVWTH(:,:)  =0._JPRB
 D2FLDHGT(:,:,:)=0._JPRB
 D2RIVMAN(:,:)  =0._JPRB
-D2RIVSHP(:,:)  =0._JPRB
+D2RIVSHP(:,:)  =1._JPRB  !!this will be a single denominator;
+                         !!rather than make LRIVSHP if statement in calc_fldstg,
+                         !!just calculate OUTWTH with dummy s for an efficiency.
+D2RIVBTA(:,:)  =0._JPRB
 D2MEANSL(:,:)  =0._JPRB
 D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
@@ -795,12 +802,24 @@ READ(TMPNAM,REC=1) R2TEMP(:,:)
 CALL MAP2VEC(R2TEMP,D2RIVMAN)
 CLOSE(TMPNAM)
 
-WRITE(LOGNAM,*)'TOPO_INIT: channel geometry parameter "s" : ',TRIM(CRIVSHP)
-OPEN(TMPNAM,FILE=CRIVSHP,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-READ(TMPNAM,REC=1) R2TEMP(:,:)
-  IF( LMAPEND ) CALL CONV_END(R2TEMP,NX,NY)
-CALL MAP2VEC(R2TEMP,D2RIVSHP)
-CLOSE(TMPNAM)
+IF( LRIVSHP )THEN
+  WRITE(LOGNAM,*)'TOPO_INIT: channel geometry parameter "s" : ',TRIM(CRIVSHP)
+  OPEN(TMPNAM,FILE=CRIVSHP,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+  READ(TMPNAM,REC=1) R2TEMP(:,:)
+    IF( LMAPEND ) CALL CONV_END(R2TEMP,NX,NY)
+  CALL MAP2VEC(R2TEMP,D2RIVSHP)
+  CLOSE(TMPNAM)
+
+  WRITE(LOGNAM,*)'TOPO_INIT: channel geometry parameter "beta" : ',TRIM(CRIVBTA)
+  OPEN(TMPNAM,FILE=TRIM(RIVBTA),FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+  DO ILFP=1,4
+    READ(TMPNAM,REC=ILFP) R2TEMP
+    IF( LMAPEND ) CALL CONV_END(R2TEMP,NX,NY)
+    CALL MAP2VEC(R2TEMP,D2TEMP)
+    D2RIVSHP(:,:,ILFP)= D2TEMP(:,:)
+  ENDDO
+  CLOSE(TMPNAM)
+ENDIF
 
 IF( LGDWDLY )THEN
   WRITE(LOGNAM,*)'TOPO_INIT: groundwater delay parameter: ',TRIM(CGDWDLY)
@@ -901,10 +920,20 @@ CALL NCERROR ( NF90_INQ_VARID(NCID,'rivman',VARID),'getting id' )
 CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
 CALL MAP2VEC(R2TEMP,D2RIVMAN)
 
-WRITE(LOGNAM,*)'TOPO_INIT: rivshp:',TRIM(CRIVPARNC)
-CALL NCERROR ( NF90_INQ_VARID(NCID,'rivshp',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
-CALL MAP2VEC(R2TEMP,D2RIVSHP)
+IF( LRIVSHP )THEN
+  WRITE(LOGNAM,*)'TOPO_INIT: rivshp:',TRIM(CRIVPARNC)
+  CALL NCERROR ( NF90_INQ_VARID(NCID,'rivshp',VARID),'getting id' )
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' )
+  CALL MAP2VEC(R2TEMP,D2RIVSHP)
+
+  WRITE(LOGNAM,*)'TOPO_INIT: rivbta:',TRIM(CRIVPARNC)
+  CALL NCERROR ( NF90_INQ_VARID(NCID,'rivbta',VARID),'getting id' )
+  DO ILEV=1,4
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP,(/1,1,ILEV/),(/NX,NY,1/)),'reading data' )
+    CALL MAP2VEC(R2TEMP,D2TEMP)
+    D2RIVBTA(:,:,ILEV)=D2TEMP(:,:)
+  ENDDO
+ENDIF
 
 IF ( LGDWDLY ) THEN
   WRITE(LOGNAM,*)'TOPO_INIT: GDWDLY:',TRIM(CRIVPARNC)
