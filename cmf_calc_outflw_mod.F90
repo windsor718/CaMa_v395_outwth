@@ -8,8 +8,8 @@ MODULE CMF_CALC_OUTFLW_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 CONTAINS
@@ -23,7 +23,7 @@ USE PARKIND1,           ONLY: JPIM, JPRB
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LBITSAFE
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
-USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV
+USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2RIVSHP, D2RIVBTA
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2RIVOUT, D2FLDSTO, D2FLDOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
@@ -35,7 +35,8 @@ REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total 
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 !$ SAVE
 INTEGER(KIND=JPIM)         :: ISEQ, JSEQ
-REAL(KIND=JPRB)            :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
+REAL(KIND=JPRB)            :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA,
+REAL(KIND=JPRB)            :: WFLW, DFLW_CHN, WP, PFRC, HYDR
 REAL(KIND=JPRB)            :: DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F
 REAL(KIND=JPRB)            :: OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE
 !$OMP THREADPRIVATE    (JSEQ, DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA  )
@@ -59,7 +60,7 @@ END DO
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-  
+
   DSFCMAX    =MAX( D2SFCELV(ISEQ,1),    D2SFCELV(JSEQ,1) )
   DSFCMAX_PRE=MAX( D2SFCELV_PRE(ISEQ,1),D2SFCELV_PRE(JSEQ,1) )
   DSLOPE = ( D2SFCELV(ISEQ,1)-D2SFCELV(JSEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.D0)
@@ -67,15 +68,35 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 
 !=== River Flow ===
   DFLW   = DSFCMAX - D2RIVELV(ISEQ,1)        !!  flow cross-section depth
-  DAREA  = D2RIVWTH(ISEQ,1) * DFLW                                            !!  flow cross-section area
+  !DAREA  = D2RIVWTH(ISEQ,1) * DFLW                                            !!  flow cross-section area
 
   DFLW_PRE=DSFCMAX_PRE - D2RIVELV(ISEQ,1)
   DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5D0 ,1.D-6 )                                            !! semi implicit flow depth
 
-  IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN 
-    DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.D0)                         !! outflow (t-1) [m2/s] (unit width)
-    D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
-                             * ( 1.D0 + PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(DOUT_PRE)*DFLW_IMP**(-7.D0/3.D0) )**(-1.D0)
+  !! calculating hydraulic radius
+  WFLW   = MIN( D2OUTWTH(ISEQ,1), D2RIVWTH(ISEQ,1))
+  DAREA  = WFLW * DFLW_IMP * (1.-(1.*(D2RIVSHP(ISEQ,1)+1.)**(-1.)))  !! flow cross-section via river geometry
+  DFLW_CHN = MIN( DFLW_IMP, D2RIVDPH(ISEQ,1) )  !! channel depth
+  HP = 2*DFLW_CHN / D2RIVWTH(ISEQ,1)  !! h' parameter
+  IF(HP<0.05)THEN  !! very shallow, wetted pelimeter is approximated as Wflow
+    WP = WFLW
+  ELSE IF(HP>=0.05 .and. HP<0.2)THEN  !! Eq.7 in Neal et al. 2015
+    PFRC = D2RIVBTA(ISEQ,1,1)*HP + D2RIVBTA(ISEQ,1,2)*HP*HP  !! pelimeter fraction when 0.05<hp<0.2
+    WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
+  ELSE
+    PFRC = D2RIVBTA(ISEQ,1,1)*0.2 + D2RIVBTA(ISEQ,1,2)*0.2*0.2 &
+           + D2RIVBTA(ISEQ,1,3)*(HP-0.2) + D2RIVBTA(ISEQ,1,4)*(HP-0.2)*(HP-0.2)  !! pelimeter fraction when 0.2<hp
+    WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
+  ENDIF
+  HYDR = DAREA / WP
+  !!
+
+  IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN
+    D2RIVOUT(ISEQ,1) = (D2RIVOUT_PRE(ISEQ,1) + PGRV*DT*DAREA*DSLOPE) &  !! minus here?
+        * ( 1.D0 + ((PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(D2RIVOUT_PRE(ISEQ,1))) * (HYDR**(4.D0/3.D0)*DAREA)**(-1.D0)) )**(-1.D0)
+    !DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.D0)                         !! outflow (t-1) [m2/s] (unit width)
+    !D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
+    !                         * ( 1.D0 + PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(DOUT_PRE)*DFLW_IMP**(-7.D0/3.D0) )**(-1.D0)
     D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.D0)
   ELSE
     D2RIVOUT(ISEQ,1) = 0.D0
@@ -94,7 +115,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.D-6 )   !! remove above river channel area
   DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5D0, 1.D-6 )
 
-  IF( DFLW_IMP_F>1.D-5 .and. DARE_IMP_F>1.D-5 )THEN 
+  IF( DFLW_IMP_F>1.D-5 .and. DARE_IMP_F>1.D-5 )THEN
     DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
     D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
                       * (1.D0 + PGRV*DT*PMANFLD**2.D0*abs(DOUT_PRE_F)*DFLW_IMP_F**(-4.D0/3.D0)*DARE_IMP_F**(-1.D0) )**(-1.D0)
@@ -129,9 +150,9 @@ ELSE
     DIUP=(OUT_R1+OUT_F1)*DT
     DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-    D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+    D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP
 !$OMP ATOMIC
-    D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+    D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW
   END DO
 !$OMP END PARALLEL DO
 ENDIF
@@ -149,7 +170,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   DFLW_PRE=D2RIVDPH_PRE(ISEQ,1)
   DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5D0, 1.D-6 )                                    !! semi implicit flow depth
 
-  IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN 
+  IF( DFLW_IMP>1.D-5 .and. DAREA>1.D-5 )THEN
     DOUT_PRE = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.D0)
     D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
                              * ( 1.D0 + PGRV*DT*D2RIVMAN(ISEQ,1)**2.D0*abs(DOUT_PRE)*DFLW_IMP**(-7.D0/3.D0) )**(-1.D0)
@@ -173,7 +194,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.D-6 )   !! remove above river channel area
   DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5D0, 1.D-6 )
 
-  IF( DFLW_IMP_F>1.D-5 .and. DARE_IMP_F>1.D-5 )THEN 
+  IF( DFLW_IMP_F>1.D-5 .and. DARE_IMP_F>1.D-5 )THEN
     DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
     D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
                       * (1.D0 + PGRV*DT*PMANFLD**2.D0*abs(DOUT_PRE_F)*DFLW_IMP_F**(-4.D0/3.D0)*DARE_IMP_F**(-1.D0) )**(-1.D0)
