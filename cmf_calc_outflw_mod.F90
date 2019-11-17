@@ -20,13 +20,13 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_OUTFLW
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LBITSAFE
+USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LBITSAFE, LRIVSHP
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2RIVSHP, D2RIVBTA
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2RIVOUT, D2FLDSTO, D2FLDOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
-USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
+USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV, D2OUTWTH
 IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
@@ -35,8 +35,8 @@ REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total 
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 !$ SAVE
 INTEGER(KIND=JPIM)         :: ISEQ, JSEQ
-REAL(KIND=JPRB)            :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA,
-REAL(KIND=JPRB)            :: WFLW, DFLW_CHN, WP, PFRC, HYDR
+REAL(KIND=JPRB)            :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA
+REAL(KIND=JPRB)            :: WFLW, DFLW_CHN, WP, PFRC, HP, HYDR
 REAL(KIND=JPRB)            :: DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F
 REAL(KIND=JPRB)            :: OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE
 !$OMP THREADPRIVATE    (JSEQ, DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA  )
@@ -87,7 +87,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
     ELSE  !! Eq.8 in Neal et al. 2015; the accuracy may drop for hp > 2.0 (very deep channel)
       PFRC = D2RIVBTA(ISEQ,1,1)*0.2 + D2RIVBTA(ISEQ,1,2)*0.2*0.2 &
            + D2RIVBTA(ISEQ,1,3)*(HP-0.2) + D2RIVBTA(ISEQ,1,4)*(HP-0.2)*(HP-0.2)  !! pelimeter fraction when 0.2<hp
-           WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
+      WP = WFLW + PFRC*D2RIVWTH(ISEQ,1)  !! wetted pelimeter is approximated by adding Wflow + Pfrc
     ENDIF
     HYDR = DAREA / WP
     !!
